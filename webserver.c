@@ -11,8 +11,11 @@
 static const int PORT = 3000;
 static const int BUF_SIZE = 1024 * 1024;
 static const int MAX_SIZE = 1024 * 1024;
-static const short HTTP_STATUS_OK = 200;
-static const short HTTP_STATUS_NOT_FOUND = 404;
+
+typedef enum { OK, NOT_FOUND, ERROR } http_status;
+static const char* HTTP_STATUS_STRING[] = { "OK", "Not Found", "Internal Server Error" };
+static const short HTTP_STATUS_CODE[] = { 200, 404, 500 };
+
 static const char* HTTP_VERSION = "HTTP/1.1";
 
 typedef struct {
@@ -28,7 +31,7 @@ typedef struct {
 } request;
 
 typedef struct {
-  short status;
+  http_status status;
   char* body;
 } response;
 
@@ -62,13 +65,14 @@ void make_response(request* request_ptr, response* response_ptr) {
   int file = open(relative_path, O_RDONLY);
 
   if (file < 0) {
-    response_ptr->status = HTTP_STATUS_NOT_FOUND;
+    response_ptr->status = HTTP_STATUS_CODE[NOT_FOUND];
   } else {
-    response_ptr->status = HTTP_STATUS_OK;
+    response_ptr->status = HTTP_STATUS_CODE[OK];
     read(file, response_ptr->body, MAX_SIZE - 1);
     close(file);
   }
-  printf("[RESPONSE] %s %s %hd\n", request_ptr->method, request_ptr->target, response_ptr->status);
+  short status_code = HTTP_STATUS_CODE[response_ptr->status];
+  printf("[RESPONSE] %s %s %hd\n", request_ptr->method, request_ptr->target, status_code);
 }
 
 void parse_request(char* buffer, request* request_ptr) {
@@ -88,8 +92,10 @@ void error(char *msg) {
 
 void send_response(int client_socket, response* response_ptr) {
   char buffer[2048];
-  sprintf(buffer, "%s %hd \r\n\r\n%s", HTTP_VERSION, response_ptr->status, response_ptr->body);
-  int n = write(client_socket, buffer, strnlen(buffer, 2048));
+  short status_code = HTTP_STATUS_CODE[response_ptr->status];
+  const char* status_str = HTTP_STATUS_STRING[response_ptr->status];
+  sprintf(buffer, "%s %hd %s\r\n\r\n%s", HTTP_VERSION, status_code, status_str, response_ptr->body);
+  ssize_t n = write(client_socket, buffer, strnlen(buffer, 2048));
   if (n < 0) {
     error("Error writing to socket\n");
   }
@@ -121,7 +127,7 @@ int make_server_socket() {
 }
 
 void handle_request(int client_socket) {
-  int num_bytes;
+  ssize_t num_bytes;
   char* buffer_ptr;
 
   buffer_ptr = calloc(1, BUF_SIZE);
@@ -169,12 +175,12 @@ void run_server(int server_socket) {
 }
 
 int main(int argc, char* argv[]) {
-    int server_socket;
+  int server_socket;
 
-    server_socket = make_server_socket();
-    run_server(server_socket);
-    // TODO: close server socket in signal handler
-    //close(server_socket);
+  server_socket = make_server_socket();
+  run_server(server_socket);
+  // TODO: close server socket in signal handler
+  //close(server_socket);
 
-    return EXIT_SUCCESS;
+  return EXIT_SUCCESS;
 }
