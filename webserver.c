@@ -3,6 +3,7 @@
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -12,14 +13,16 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
-static const int DEFAULT_PORT = 3000;
-static const int BACKLOG = 5;
-static const int BUF_SIZE = 1024 * 1024;
-static const int MAX_SIZE = 1024 * 1024;
+#define MAX_LENGTH 1024 * 1024
+
+static const uint16_t DEFAULT_PORT = 3000;
+static const int32_t BACKLOG = 5;
+static const uint32_t BUF_SIZE = 1024 * 1024;
+static const uint32_t MAX_SIZE = 1024 * 1024;
 
 typedef enum { OK, NOT_FOUND, ERROR } http_status;
 static const char* HTTP_STATUS_STRING[] = { "OK", "Not Found", "Internal Server Error" };
-static const short HTTP_STATUS_CODE[] = { 200, 404, 500 };
+static const uint16_t HTTP_STATUS_CODE[] = { 200, 404, 500 };
 static const char* HTTP_VERSION = "HTTP/1.1";
 
 volatile sig_atomic_t stop = false;
@@ -72,7 +75,7 @@ void destroy_response(response* response_ptr) {
 }
 
 void make_response(request* request_ptr, response* response_ptr) {
-  char relative_path[MAX_SIZE];
+  char relative_path[MAX_LENGTH];
   sprintf(relative_path, ".%s", request_ptr->target);
   int file = open(relative_path, O_RDONLY);
 
@@ -103,7 +106,7 @@ void error(char *msg) {
 }
 
 void send_response(int client_socket, response* response_ptr) {
-  char buffer[2048];
+  char buffer[2048] = {0};
   short status_code = HTTP_STATUS_CODE[response_ptr->status];
   const char* status_str = HTTP_STATUS_STRING[response_ptr->status];
   sprintf(buffer, "%s %hd %s\r\n\r\n%s", HTTP_VERSION, status_code, status_str, response_ptr->body);
@@ -180,7 +183,6 @@ void handle_request(int client_socket) {
 
 void run_server(int server_socket) {
   socklen_t client_addr_len;
-  int client_socket, result;
   struct sockaddr_in cli_addr;
   client_addr_len = sizeof(cli_addr);
 
@@ -190,7 +192,7 @@ void run_server(int server_socket) {
     FD_SET(server_socket, &fds);
 
     //TODO: Consider using pselect to avoid race condition
-    result = select(server_socket + 1, &fds, NULL, NULL, NULL);
+    int result = select(server_socket + 1, &fds, NULL, NULL, NULL);
 
     if (result < 0 && errno != EINTR) {
       error("Error in select");
@@ -204,7 +206,7 @@ void run_server(int server_socket) {
       continue;
     }
 
-    client_socket = accept(server_socket, (struct sockaddr *) &cli_addr, &client_addr_len);
+    int client_socket = accept(server_socket, (struct sockaddr *) &cli_addr, &client_addr_len);
 
     if (client_socket < 0) {
       error("Error accepting connection");
@@ -214,7 +216,7 @@ void run_server(int server_socket) {
   }
 }
 
-int main(int argc, char* argv[]) {
+int main() {
   int server_socket;
 
   signal(SIGINT, sig_handler);
