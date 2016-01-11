@@ -5,8 +5,8 @@ SRCDIR=src
 BINDIR=bin
 OBJDIR=obj
 
-SRCS = $(wildcard $(SRCDIR)/*.c) # Source files
-OBJS = $(addprefix $(OBJDIR)/,$(notdir $(SRCS:.c=.o)))
+SRCS = $(wildcard $(SRCDIR)/*.c) 												# Source files
+OBJS = $(addprefix $(OBJDIR)/,$(notdir $(SRCS:.c=.o)))  # Object files
 
 CC=clang
 CFLAGS=\
