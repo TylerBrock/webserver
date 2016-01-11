@@ -1,13 +1,41 @@
+TARGET=webserver
+
+INCDIR=include
+SRCDIR=src
+BINDIR=bin
+OBJDIR=obj
+
+SRCS = $(wildcard $(SRCDIR)/*.c) # Source files
+OBJS = $(addprefix $(OBJDIR)/,$(notdir $(SRCS:.c=.o)))
+
 CC=clang
-CFLAGS=-Wall -g -O3
+CFLAGS=\
+	-Wall\
+	-Wextra\
+	-Wpedantic\
+	-Wshadow\
+	-Wstrict-overflow\
+	-Werror\
+	-fno-strict-aliasing\
+	-flto\
+	-march=native\
+	-I ./$(INCDIR)\
+	-g\
+	-O2
 
 all: webserver
 
-webserver: webserver.o
-	$(CC) $(CFLAGS) -o webserver $<
+webserver: $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $(OBJS)
 
-webserver.o: webserver.c
-	$(CC) $(CFLAGS) -c $<
+objdir:
+	mkdir -p $(OBJDIR)
+
+obj/%.o: src/%.c
+	$(CC) $(CFLAGS) -o $@ -c $<
 
 clean:
-	rm *o webserver
+	rm -fr $(OBJDIR)/*.o
+	rm webserver
+
+.PHONY: all

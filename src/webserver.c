@@ -13,65 +13,22 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
+#include "constants.h"
+#include "http.h"
+#include "request.h"
+#include "response.h"
+
 #define MAX_LENGTH 1024 * 1024
 
 static const uint16_t DEFAULT_PORT = 3000;
 static const int32_t BACKLOG = 5;
-static const uint32_t BUF_SIZE = 1024 * 1024;
-static const uint32_t MAX_SIZE = 1024 * 1024;
-
-typedef enum { OK, NOT_FOUND, ERROR } http_status;
-static const char* HTTP_STATUS_STRING[] = { "OK", "Not Found", "Internal Server Error" };
-static const uint16_t HTTP_STATUS_CODE[] = { 200, 404, 500 };
-static const char* HTTP_VERSION = "HTTP/1.1";
 
 volatile sig_atomic_t stop = false;
-
-typedef struct {
-  char* key;
-  char* value;
-} header;
-
-typedef struct {
-  char* method;
-  char* target;
-  short version_major;
-  short version_minor;
-} request;
-
-typedef struct {
-  http_status status;
-  char* body;
-} response;
 
 void sig_handler(int signo) {
   if (signo == SIGINT) {
     stop = true;
   }
-}
-
-request* new_request() {
-  request* request_ptr = calloc(1, sizeof(request));
-  request_ptr->method = calloc(1, MAX_SIZE);
-  request_ptr->target = calloc(1, MAX_SIZE);
-  return request_ptr;
-}
-
-response* new_response() {
-  response* response_ptr = calloc(1, sizeof(response));
-  response_ptr->body = calloc(1, MAX_SIZE);
-  return response_ptr;
-}
-
-void destroy_request(request* request_ptr) {
-  free(request_ptr->method);
-  free(request_ptr->target);
-  free(request_ptr);
-}
-
-void destroy_response(response* response_ptr) {
-  free(response_ptr->body);
-  free(response_ptr);
 }
 
 void make_response(request* request_ptr, response* response_ptr) {
@@ -88,16 +45,6 @@ void make_response(request* request_ptr, response* response_ptr) {
   }
   short status_code = HTTP_STATUS_CODE[response_ptr->status];
   printf("[RESPONSE] %s %s %hd\n", request_ptr->method, request_ptr->target, status_code);
-}
-
-void parse_request(char* buffer, request* request_ptr) {
-  sscanf(buffer, "%s %s %hd/%hd",
-    request_ptr->method,
-    request_ptr->target,
-    &request_ptr->version_major,
-    &request_ptr->version_minor
-  );
-  printf("[REQUEST] %s %s\n", request_ptr->method, request_ptr->target);
 }
 
 void error(char *msg) {
@@ -154,12 +101,12 @@ void handle_request(int client_socket) {
   ssize_t num_bytes;
   char* buffer_ptr;
 
-  buffer_ptr = calloc(1, BUF_SIZE);
+  buffer_ptr = calloc(1, MAX_SIZE);
   if (buffer_ptr == NULL) {
     error("Error allocating buffer");
   }
 
-  num_bytes = read(client_socket, buffer_ptr, BUF_SIZE - 1);
+  num_bytes = read(client_socket, buffer_ptr, MAX_SIZE - 1);
 
   if (num_bytes < 0) {
     error("Error reading from socket");
@@ -169,6 +116,7 @@ void handle_request(int client_socket) {
 
   request* request_ptr = new_request();
   parse_request(buffer_ptr, request_ptr);
+  printf("[REQUEST] %s %s\n", request_ptr->method, request_ptr->target);
   free(buffer_ptr);
 
   // Build response
