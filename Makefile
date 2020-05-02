@@ -7,6 +7,7 @@ OBJDIR=obj
 
 SRCS = $(wildcard $(SRCDIR)/*.c) 												# Source files
 OBJS = $(addprefix $(OBJDIR)/,$(notdir $(SRCS:.c=.o)))  # Object files
+DEPS = $(addprefix $(OBJDIR)/,$(notdir $(OBJS:.o=.d)))  # Depenencies
 
 CC=clang
 CFLAGS=\
@@ -25,17 +26,24 @@ CFLAGS=\
 
 all: webserver
 
+-include $(DEPS)
+
 webserver: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(OBJS)
 
-objdir:
+$(OBJDIR):
 	mkdir -p $(OBJDIR)
 
-obj/%.o: src/%.c
+$(OBJS): | $(OBJDIR)
+
+$(OBJDIR)/%.o: src/%.c
 	$(CC) $(CFLAGS) -o $@ -c $<
+
+$(OBJDIR)/%.d: src/%.c
+	$(CPP) $(CFLAGS) $< -MM -MT $(@:.d=.o) >$@
 
 clean:
 	rm -fr $(OBJDIR)/*.o
-	rm webserver
+	rm -f webserver
 
 .PHONY: all

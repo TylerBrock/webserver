@@ -1,10 +1,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "constants.h"
 #include "http.h"
 #include "response.h"
-
-static const uint32_t MAX_SIZE = 1024 * 1024;
 
 response* new_response() {
   response* response_ptr = calloc(1, sizeof(response));

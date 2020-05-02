@@ -140,6 +140,7 @@ void run_server(int server_socket) {
     FD_SET(server_socket, &fds);
 
     //TODO: Consider using pselect to avoid race condition
+    /*
     int result = select(server_socket + 1, &fds, NULL, NULL, NULL);
 
     if (result < 0 && errno != EINTR) {
@@ -153,6 +154,7 @@ void run_server(int server_socket) {
     if (!result) {
       continue;
     }
+    */
 
     int client_socket = accept(server_socket, (struct sockaddr *) &cli_addr, &client_addr_len);
 
